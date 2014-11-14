@@ -137,6 +137,7 @@ public class MyActivity extends Activity {
                                     Button button = (Button)findViewById(R.id.button);
                                     button.setBackgroundColor(Color.RED);
                                 }
+                                stop = true; 
                             }
                             else{
                                 readBuffer[index] = packet[i];
