@@ -27,9 +27,11 @@ public class MyActivity extends Activity {
     private InputStream input;
     private static final String OUR_BLUETOOTH_DEVICE = ""; //TODO What was the name of the bluetooth device?
     private static final UUID ID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Might be shady???
+    private static final String CORRECT_SIGNATURE = ""; // TODO get correct SRAM PUF
     volatile boolean stop;
     byte[] readBuffer;
     int index;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -155,8 +157,25 @@ public class MyActivity extends Activity {
         });
 
     }
-    public boolean correctSRAM(String s){
-        //TODO code HD Calculator (may need to make static final variable for corrrect sram puf)
-        return true;
+    public boolean correctSRAM(String candidateSignature){
+        return getHammingDistance(CORRECT_SIGNATURE, candidateSignature) < 0.10;
+    }
+
+    public static double getHammingDistance(String sequence1, String sequence2) {
+        // Source: http://stackoverflow.com/a/16260973
+        char[] s1 = sequence1.toCharArray();
+        char[] s2 = sequence2.toCharArray();
+
+        int shorter = Math.min(s1.length, s2.length);
+        int longest = Math.max(s1.length, s2.length);
+
+        double result = 0;
+        for (int i=0; i<shorter; i++) {
+            if (s1[i] != s2[i]) result++;
+        }
+
+        result += longest - shorter;
+
+        return result / 100.0;
     }
 }
