@@ -19,8 +19,10 @@
         android:layout_height="wrap_content"
         android:text="Connect"
         android:id="@+id/button"
-        android:layout_centerHorizontal="true"
-        android:onClick="connect"/>
+        android:onClick="connect"
+        android:layout_toEndOf="@+id/textView"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@+id/textView" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -29,5 +31,17 @@
         android:id="@+id/textView2"
         android:layout_centerVertical="true"
         android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Authenticate"
+        android:onClick="authenticate"
+        android:id="@+id/button2"
+        android:layout_toEndOf="@+id/button"
+        android:enabled="false"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true" />
 
 </RelativeLayout>

@@ -26,7 +26,7 @@ public class MyActivity extends Activity {
     private OutputStream output;
     private InputStream input;
     private static final String OUR_BLUETOOTH_DEVICE = "BadAssTechies";
-    private static final String CORRECT_SIGNATURE = "2550000000000000000217827752405108254216254103000001131164002233200003005556150152285000000255003320800190000050040705055555251518100550099000005510000500050013500000130519200000000055130513300000000000000000000000000000000505024825425500148027110534713415260160360025500000114431000000161214518060002011285413200000000000555555846011283700008000176212800000015452216136123619560000215722161037139711672127174700001909221610091459118917990178218711911075100000000"; // TODO get correct SRAM PUF
+    private static final String CORRECT_SIGNATURE = "255023425418720122312322324712719098167811234821782775240510825424325410300000127116400223320000300555615015228500000025310332270019000005160407050555552515181005500990000055100005005500135000001305109000000000551305215000000000000000000000000000000005050248254255002310271105347134152601603600255000001144310000001612130194000020112854132001460000000055555584601022500000000176212800000015452216136123619560000215722161037139711672127174700001909221610091459118917990178221612201075100000000"; // TODO get correct SRAM PUF
     volatile boolean stop;
     volatile boolean right;
     byte[] readBuffer;
@@ -62,19 +62,39 @@ public class MyActivity extends Activity {
         try {
             findBlueToothDevice();
             openBlueToothDevice();
+            TextView views = (TextView)findViewById(R.id.textView2);
+            views.setText("Bluetooth device connected successfully.");
+            Button button = (Button)findViewById(R.id.button2);
+            button.setEnabled(true);
+
          }
         catch(IOException e){
             e.printStackTrace();
             TextView views = (TextView)findViewById(R.id.textView2);
-            views.setText("Bluetooth device not found");
+            views.setText("Bluetooth device failed to connect.");
         }
+
+    }
+    public void authenticate(View view){
         try {
             sendMessage();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        TextView views = (TextView)findViewById(R.id.textView2);
+        views.setText("In Progress...");
+        while(!stop) {
+        }
+        if(right){
+            views.setText("Authentication successful!");
+            view.setBackgroundColor(Color.GREEN);
+        }
+        else{
+            views.setText("Authentication failed!");
+            view.setBackgroundColor(Color.RED);
+        }
+        stop = false;
     }
-
     public void findBlueToothDevice(){
         adapter = BluetoothAdapter.getDefaultAdapter();
         ourDevice = null;
@@ -162,24 +182,54 @@ public class MyActivity extends Activity {
 
     }
     public boolean correctSRAM(String candidateSignature){
-        return getHammingDistance(CORRECT_SIGNATURE, candidateSignature) < 0.10;
+        return LevenshteinDistance(CORRECT_SIGNATURE, candidateSignature) < 40;
     }
 
-    public static double getHammingDistance(String sequence1, String sequence2) {
-        // Source: http://stackoverflow.com/a/16260973
-        char[] s1 = sequence1.toCharArray();
-        char[] s2 = sequence2.toCharArray();
+    /**
+     * Courtesy of http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Java
+     * @param s0 string 1
+     * @param s1 String 2
+     * @return
+     */
+    public int LevenshteinDistance (String s0, String s1) {
+        int len0 = s0.length() + 1;
+        int len1 = s1.length() + 1;
 
-        int shorter = Math.min(s1.length, s2.length);
-        int longest = Math.max(s1.length, s2.length);
+        // the array of distances
+        int[] cost = new int[len0];
+        int[] newcost = new int[len0];
 
-        double result = 0;
-        for (int i=0; i<shorter; i++) {
-            if (s1[i] != s2[i]) result++;
+        // initial cost of skipping prefix in String s0
+        for (int i = 0; i < len0; i++) cost[i] = i;
+
+        // dynamicaly computing the array of distances
+
+        // transformation cost for each letter in s1
+        for (int j = 1; j < len1; j++) {
+            // initial cost of skipping prefix in String s1
+            newcost[0] = j;
+
+            // transformation cost for each letter in s0
+            for(int i = 1; i < len0; i++) {
+                // matching current letters in both strings
+                int match = (s0.charAt(i - 1) == s1.charAt(j - 1)) ? 0 : 1;
+
+                // computing cost for each transformation
+                int cost_replace = cost[i - 1] + match;
+                int cost_insert  = cost[i] + 1;
+                int cost_delete  = newcost[i - 1] + 1;
+
+                // keep minimum cost
+                newcost[i] = Math.min(Math.min(cost_insert, cost_delete), cost_replace);
+            }
+
+            // swap cost/newcost arrays
+            int[] swap = cost;
+            cost = newcost;
+            newcost = swap;
         }
 
-        result += longest - shorter;
-
-        return result / 100.0;
+        // the distance is the cost for transforming all letters in both strings
+        return cost[len0 - 1];
     }
 }
