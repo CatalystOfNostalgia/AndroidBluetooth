@@ -21,14 +21,14 @@ import android.widget.*;
 public class MyActivity extends Activity {
     private BluetoothAdapter adapter;
     private BluetoothDevice ourDevice;
-    private HashSet<BluetoothDevice> devices;
+    private Collection<BluetoothDevice> devices;
     private BluetoothSocket socket;
     private OutputStream output;
     private InputStream input;
-    private static final String OUR_BLUETOOTH_DEVICE = ""; //TODO What was the name of the bluetooth device?
-    private static final UUID ID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Might be shady???
-    private static final String CORRECT_SIGNATURE = ""; // TODO get correct SRAM PUF
+    private static final String OUR_BLUETOOTH_DEVICE = "BadAssTechies";
+    private static final String CORRECT_SIGNATURE = "2550000000000000000217827752405108254216254103000001131164002233200003005556150152285000000255003320800190000050040705055555251518100550099000005510000500050013500000130519200000000055130513300000000000000000000000000000000505024825425500148027110534713415260160360025500000114431000000161214518060002011285413200000000000555555846011283700008000176212800000015452216136123619560000215722161037139711672127174700001909221610091459118917990178218711911075100000000"; // TODO get correct SRAM PUF
     volatile boolean stop;
+    volatile boolean right;
     byte[] readBuffer;
     int index;
 
@@ -58,56 +58,71 @@ public class MyActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void connect(View view){
-        if(findBlueToothDevice()){
-            if(openBlueToothDevice()){
-                this.sendMessage(); //We might need to send message to bluetooth device to get data back depending on implementation.
-                this.listen();
-            }
+    public void connect(View view) {
+        try {
+            findBlueToothDevice();
+            openBlueToothDevice();
+         }
+        catch(IOException e){
+            e.printStackTrace();
+            TextView views = (TextView)findViewById(R.id.textView2);
+            views.setText("Bluetooth device not found");
+        }
+        try {
+            sendMessage();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    public boolean findBlueToothDevice(){
+    public void findBlueToothDevice(){
         adapter = BluetoothAdapter.getDefaultAdapter();
         ourDevice = null;
         if(adapter == null){
             TextView view = (TextView)findViewById(R.id.textView2);
             view.setText("No bluetooth adapter detected");
-            return false;
+            return;
         }
         else if(!adapter.isEnabled()){
             Intent enableBT = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBT, 0);
         }
-        devices = (HashSet)adapter.getBondedDevices();
+        devices = adapter.getBondedDevices();
         for(BluetoothDevice device: devices){
             if(device.getName().equals(OUR_BLUETOOTH_DEVICE)){
                 ourDevice = device;
+                break;
             }
             else
                 continue;
         }
-        return !(ourDevice == null);
+        return;
     }
 
-    public boolean openBlueToothDevice(){
-        try {
-            socket = ourDevice.createRfcommSocketToServiceRecord(ID);
-            socket.connect();
-            output = socket.getOutputStream();
-            input = socket.getInputStream();
-            return true;
-        }
+    public void openBlueToothDevice() throws IOException {
+        UUID id = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+        socket = ourDevice.createRfcommSocketToServiceRecord(id);
+        socket.connect();
+        output = socket.getOutputStream();
+        input = socket.getInputStream();
+        listen();
+        return;
+
+        /*
         catch(IOException e){
             TextView view = (TextView)findViewById(R.id.textView2);
             view.setText("Issue opening bluetooth port");
+            e.printStackTrace();
             return false;
-        }
+        }*/
 
     }
-    public void sendMessage(){
-        //TODO: Do we need to send a command to the bluetooth device for it to send us the SRAM?
+    public void sendMessage() throws IOException{
+        String msg = "$";
+        msg += "\n";
+        output.write(msg.getBytes());
     }
+
     public void listen(){
         final Handler handler = new Handler();
         final byte delimiter = 10;
@@ -126,20 +141,8 @@ public class MyActivity extends Activity {
                                 byte[] readableBytes = new byte[index];
                                 System.arraycopy(readBuffer, 0, readableBytes, 0, readableBytes.length);
                                 String sram = new String(readableBytes, "US-ASCII");
-                                boolean correct = correctSRAM(sram);
-                                if(correct){
-                                    TextView view = (TextView)findViewById(R.id.textView2);
-                                    view.setText("This is our bluetooth device!");
-                                    Button button = (Button)findViewById(R.id.button);
-                                    button.setBackgroundColor(Color.GREEN);
-                                }
-                                else{
-                                    TextView view = (TextView)findViewById(R.id.textView2);
-                                    view.setText("Wrong device!");
-                                    Button button = (Button)findViewById(R.id.button);
-                                    button.setBackgroundColor(Color.RED);
-                                }
-                                stop = true; 
+                                right = correctSRAM(sram);
+                                stop = true;
                             }
                             else{
                                 readBuffer[index] = packet[i];
@@ -155,6 +158,7 @@ public class MyActivity extends Activity {
                 }
             }
         });
+        thread.start();
 
     }
     public boolean correctSRAM(String candidateSignature){
