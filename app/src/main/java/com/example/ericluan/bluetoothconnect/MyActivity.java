@@ -26,7 +26,7 @@ public class MyActivity extends Activity {
     private OutputStream output;
     private InputStream input;
     private static final String OUR_BLUETOOTH_DEVICE = "BadAssTechies";
-    private static final String CORRECT_SIGNATURE = "255023425418720122312322324712719098167811234821782775240510825424325410300000127116400223320000300555615015228500000025310332270019000005160407050555552515181005500990000055100005005500135000001305109000000000551305215000000000000000000000000000000005050248254255002310271105347134152601603600255000001144310000001612130194000020112854132001460000000055555584601022500000000176212800000015452216136123619560000215722161037139711672127174700001909221610091459118917990178221612201075100000000"; // TODO get correct SRAM PUF
+    private static final String CORRECT_SIGNATURE = "255023425418720122312322324712719098167811234821782775240510825424325410300000127116400223320000300555615015228500000025310332270019000005160407050555552515181005500990000055100005005500135000001305109000000000551305215000000000000000000000000000000005050248254255002310271105347134152601603600255000001144310000001612130194000020112854132001460000000055555584601022500000000176212800000015452216136123619560000215722161037139711672127174700001909221610091459118917990178221612201075100000000";
     volatile boolean stop;
     volatile boolean right;
     byte[] readBuffer;
@@ -58,6 +58,10 @@ public class MyActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * Triggers on connect button. Enables the authenticate button if connect successful.
+     * @param view
+     */
     public void connect(View view) {
         try {
             findBlueToothDevice();
@@ -75,6 +79,11 @@ public class MyActivity extends Activity {
         }
 
     }
+
+    /**
+     * Authenticates the connected bluetooth device as ours.
+     * @param view
+     */
     public void authenticate(View view){
         try {
             sendMessage();
@@ -95,6 +104,10 @@ public class MyActivity extends Activity {
         }
         stop = false;
     }
+
+    /**
+     * Searches through paired devices for our device.
+     */
     public void findBlueToothDevice(){
         adapter = BluetoothAdapter.getDefaultAdapter();
         ourDevice = null;
@@ -119,7 +132,12 @@ public class MyActivity extends Activity {
         return;
     }
 
+    /**
+     * Opens the bluetooth port using the UUID and allows listening for data.
+     * @throws IOException
+     */
     public void openBlueToothDevice() throws IOException {
+        //Standard UUID connection port for this bluetooth device.
         UUID id = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
         socket = ourDevice.createRfcommSocketToServiceRecord(id);
         socket.connect();
@@ -137,12 +155,20 @@ public class MyActivity extends Activity {
         }*/
 
     }
+
+    /**
+     * Send get data command to bluetooth.
+     * @throws IOException
+     */
     public void sendMessage() throws IOException{
         String msg = "$";
         msg += "\n";
         output.write(msg.getBytes());
     }
 
+    /**
+     * Listens for the data from the bluetooth.
+     */
     public void listen(){
         final Handler handler = new Handler();
         final byte delimiter = 10;
@@ -181,12 +207,19 @@ public class MyActivity extends Activity {
         thread.start();
 
     }
+
+    /**
+     * Returns true if less than 40 changes are required by Levenshtein, returns false if more. 
+     * @param candidateSignature
+     * @return
+     */
     public boolean correctSRAM(String candidateSignature){
         return LevenshteinDistance(CORRECT_SIGNATURE, candidateSignature) < 40;
     }
 
     /**
      * Courtesy of http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Java
+     * Calculates the LevenshteinDistance between two strings.
      * @param s0 string 1
      * @param s1 String 2
      * @return
